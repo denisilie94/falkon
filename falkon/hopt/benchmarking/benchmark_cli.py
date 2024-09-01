@@ -1,3 +1,4 @@
+import logging
 import argparse
 import datetime
 import math
@@ -24,6 +25,7 @@ from falkon.hopt.optimization.reporting import get_writer
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 AUTO_PEN_MULTIPLIER = 1
 
+logger = logging.getLogger(__name__)
 
 def median_heuristic(X: torch.Tensor, sigma_type: str, num_rnd_points: Optional[int]):
     # https://arxiv.org/pdf/1707.07269.pdf
@@ -53,7 +55,7 @@ def save_logs(logs: Any, exp_name: str, log_folder: str = "./logs"):
 
     with open(log_path, "wb") as file:
         pickle.dump(logs, file, protocol=4)
-    print(f"Log saved to {log_path}", flush=True)
+    logger.info(f"Log saved to {log_path}")
 
 
 def read_gs_file(file_name: str) -> List[HPGridPoint]:
@@ -70,7 +72,7 @@ def sigma_pen_init(
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     if sigma_init == "auto":
         sigma_init = median_heuristic(data["Xtr"], sigma_type="single", num_rnd_points=5000)
-        print("Initial sigma is: %.4e" % (sigma_init))
+        logger.info("Initial sigma is: %.4e" % (sigma_init))
     else:
         sigma_init = float(sigma_init)
     if sigma_type == "single":
@@ -83,7 +85,7 @@ def sigma_pen_init(
 
     if penalty_init == "auto":
         penalty_init = AUTO_PEN_MULTIPLIER / data["Xtr"].shape[0]
-        print(f"Initial penalty (auto with multiplier {AUTO_PEN_MULTIPLIER}) is: {penalty_init:.4e})")
+        logger.info(f"Initial penalty (auto with multiplier {AUTO_PEN_MULTIPLIER}) is: {penalty_init:.4e})")
     else:
         penalty_init = float(penalty_init)
 
@@ -92,7 +94,7 @@ def sigma_pen_init(
 
 def choose_centers_init(Xtr, metadata, num_centers, seed) -> torch.Tensor:
     if "centers" in metadata:
-        print(f"Ignoring default centers and picking new {num_centers} centers.")
+        logger.info(f"Ignoring default centers and picking new {num_centers} centers.")
     selector = UniformSelector(np.random.default_rng(seed), num_centers)
     centers = selector.select(Xtr, None)
     # noinspection PyTypeChecker
@@ -196,7 +198,7 @@ def run_optimization(
     if minibatch > 0:
         num_batches = math.ceil(Xtr.shape[0] / minibatch)
         learning_rate = learning_rate / num_batches
-        print("Learning rate changed to %.2e" % (learning_rate))
+        logger.info("Learning rate changed to %.2e" % (learning_rate))
 
     model = init_model(
         model_type=model_type,
@@ -308,10 +310,10 @@ if __name__ == "__main__":
     p.add_argument("--cuda", action="store_true")
     p.add_argument("--fetch-loss", action="store_true")
     args = p.parse_args()
-    print("-------------------------------------------")
-    print(datetime.datetime.now())
-    print("############### SEED: %d ################" % (args.seed))
-    print("-------------------------------------------")
+    logger.info("-------------------------------------------")
+    logger.info(datetime.datetime.now())
+    logger.info("############### SEED: %d ################" % (args.seed))
+    logger.info("-------------------------------------------")
     np.random.seed(args.seed)
     get_writer(args.name)
     args.model = args.model.lower()

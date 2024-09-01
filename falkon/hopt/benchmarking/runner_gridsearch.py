@@ -2,12 +2,14 @@ import io
 import itertools
 import pathlib
 import subprocess
+import logging
 
 import numpy as np
 
 SIMPLE_HOPT_PATH = pathlib.Path(__file__).parent.joinpath("benchmark_cli.py").resolve()
 DEFAULT_SEED = 12319
 
+logger = logging.getLogger(__name__)
 
 def write_gridspec_file(out_file, sigmas, penalties):
     with open(out_file, "w") as fh:
@@ -44,7 +46,7 @@ def run_gs(
         proc_args.append("--mb 16000")
     proc = subprocess.Popen([" ".join(proc_args)], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
-        print(line, end="")
+        logger.info(line, end="")
     ret_code = proc.wait()
     if ret_code != 0:
         raise RuntimeError("Process returned error", ret_code)

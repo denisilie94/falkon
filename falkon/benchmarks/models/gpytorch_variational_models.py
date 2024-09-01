@@ -1,10 +1,13 @@
 import time
+import logging
 
 import gpytorch
 import numpy as np
 import torch
 from gpytorch.models import ApproximateGP
 from gpytorch.variational import UnwhitenedVariationalStrategy, VariationalStrategy
+
+logger = logging.getLogger(__name__)
 
 __all__ = ("get_rbf_kernel", "RegressionVGP", "TwoClassVGP", "MultiClassVGP")
 
@@ -172,7 +175,7 @@ class GPTrainer:
         self.params = params
         # Count params
         num_params = [np.prod(p.data.shape) for p in params]
-        print("Training with %d parameters" % (sum(num_params)))
+        logger.info("Training with %d parameters" % (sum(num_params)))
         # Initialize optimizer with the parameters
         if self.natgrad_lr > 0:
             self.ng_optimizer = gpytorch.optim.NGD(
@@ -183,8 +186,8 @@ class GPTrainer:
         else:
             self.ng_optimizer = None
             self.optimizer = torch.optim.Adam(self.params, lr=lr)
-        print(f"Optimizer: {self.optimizer}")
-        print(f"nat-grad optimizer: {self.ng_optimizer}")
+        logger.info(f"Optimizer: {self.optimizer}")
+        logger.info(f"nat-grad optimizer: {self.ng_optimizer}")
 
         self.error_every = 100
 
@@ -220,18 +223,17 @@ class GPTrainer:
                 if j % self.error_every == 0:
                     t_elapsed += time.time() - t_start
                     err, err_name = self.err_fn(y_batch.cpu(), self.model.likelihood(output).mean.detach().cpu())
-                    print(
+                    logger.info(
                         "Epoch %d, iter %d/%d - Elapsed %.1fs - Loss: %.3f - %s: %.7f"
-                        % (epoch + 1, j, len(train_loader), t_elapsed, loss.item(), err_name, err),
-                        flush=True,
+                        % (epoch + 1, j, len(train_loader), t_elapsed, loss.item(), err_name, err)
                     )
                     t_start = time.time()
             t_elapsed += time.time() - t_start  # t_start will be reset at the start of the loop
 
             test_pred = self.predict(Xval)
             err, err_name = self.err_fn(Yval, test_pred)
-            print("Epoch %d - elapsed %.2fs - validation %s: %.5f" % (epoch + 1, t_elapsed, err_name, err))
-        print("Training took %.2fs" % (t_elapsed))
+            logger.info("Epoch %d - elapsed %.2fs - validation %s: %.5f" % (epoch + 1, t_elapsed, err_name, err))
+        logger.info("Training took %.2fs" % (t_elapsed))
 
     def predict(self, X):
         test_dataset = torch.utils.data.TensorDataset(X)
@@ -292,14 +294,14 @@ class RegressionVGP(GPTrainer):
         )
         loss_fn = gpytorch.mlls.VariationalELBO(likelihood, model, num_data=num_data)
         params = model.parameters()
-        print("Model parameters:")
+        logger.info("Model parameters:")
         for k, v in model.named_parameters():
-            print(f"\t{k} : {v.shape}")
-        print("Initialized sigma to %s" % (kernel.base_kernel.lengthscale))
-        print("Initialized lambda to %s" % (likelihood.noise_covar.noise))
+            logger.info(f"\t{k} : {v.shape}")
+        logger.info("Initialized sigma to %s" % (kernel.base_kernel.lengthscale))
+        logger.info("Initialized lambda to %s" % (likelihood.noise_covar.noise))
         if not learn_ind_pts:
             exclude = set(mean_module.parameters()) | set(kernel.parameters())
-            print("Excluding parameters from mean and covariance models:", exclude)
+            logger.info("Excluding parameters from mean and covariance models:", exclude)
             params = list(set(model.parameters()) - exclude)
         super().__init__(
             model,
@@ -376,7 +378,7 @@ class TwoClassVGP(GPTrainer):
         params = model.parameters()
         if not learn_ind_pts:
             exclude = set(mean_module.parameters()) | set(kernel.parameters())
-            print("Excluding parameters from mean and covariance models:", exclude)
+            logger.info("Excluding parameters from mean and covariance models:", exclude)
             params = list(set(model.parameters()) - exclude)
         super().__init__(
             model,

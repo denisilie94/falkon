@@ -5,6 +5,7 @@ Copyright (c) 2022 Ruilong Li, UC Berkeley.
 Copyright (c) 2023 Giacomo Meanti
 """
 
+import logging
 import glob
 import importlib.machinery
 import json
@@ -18,6 +19,7 @@ from typing import Optional
 import torch.cuda
 from torch.utils.cpp_extension import _get_build_directory, load
 
+logger = logging.getLogger(__name__)
 
 def _get_extension_path(lib_name):
     lib_dir = os.path.dirname(__file__)
@@ -171,7 +173,7 @@ except ImportError:
         # Remove the build directory just to be safe: pytorch jit might stuck if the build
         # directory exists.
         shutil.rmtree(build_dir)
-        print("Building C extension. This might take a couple of minutes.")
+        logger.info("Building C extension. This might take a couple of minutes.")
     load(
         name=name,
         sources=sources,

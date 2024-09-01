@@ -1,4 +1,5 @@
 import warnings
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union
 
@@ -15,6 +16,7 @@ from falkon.utils.helpers import check_same_dtype, sizeof_dtype
 from falkon.utils.tensor_helpers import is_f_contig
 
 _tensor_type = Union[torch.Tensor, SparseTensor]
+logger = logging.getLogger(__name__)
 
 
 class FalkonBase(base.BaseEstimator, ABC):
@@ -100,7 +102,7 @@ class FalkonBase(base.BaseEstimator, ABC):
             # train_time is the cumulative training time (excludes time for this function)
             self.fit_times_.append(self.fit_times_[0] + train_time)
             if it % self.error_every != 0:
-                print(f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s", flush=True)
+                logger.info(f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s")
                 return
             err_str = "training" if Xts is None or Yts is None else "validation"
             alpha = self._params_to_original_space(beta, precond)
@@ -115,9 +117,8 @@ class FalkonBase(base.BaseEstimator, ABC):
             err_name = "error"
             if isinstance(err, tuple) and len(err) == 2:
                 err, err_name = err
-            print(
-                f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s - {err_str} {err_name}: {str(err)}",
-                flush=True,
+            logger.info(
+                f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s - {err_str} {err_name}: {str(err)}"
             )
             self.val_errors_.append(err)
 
@@ -180,10 +181,10 @@ class FalkonBase(base.BaseEstimator, ABC):
             necessary_ram = X.size(0) * ny_points.size(0) * dts
             if available_ram > necessary_ram:
                 if self.options.debug:
-                    print("%d*%d Kernel matrix will be stored" % (X.size(0), ny_points.size(0)))
+                    logger.info("%d*%d Kernel matrix will be stored" % (X.size(0), ny_points.size(0)))
                 return True
             elif self.options.debug:
-                print(
+                logger.info(
                     f"Cannot store full kernel matrix: not enough memory "
                     f"(have {available_ram / 2 ** 30:.2f}GB, need {necessary_ram / 2 ** 30:.2f}GB)"
                 )

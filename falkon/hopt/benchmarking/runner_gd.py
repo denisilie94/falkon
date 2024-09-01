@@ -1,4 +1,5 @@
 import io
+import logging
 import pathlib
 import subprocess
 from typing import List, Union
@@ -21,6 +22,8 @@ MODELS = [
     "stoch-creg-penfit",
     "svgp",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def gen_exp_name(
@@ -117,7 +120,7 @@ def run_simple_hopt(
     proc = subprocess.Popen([" ".join(proc_args)], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     with open(f"logs/tee_{exp_name_final}.txt", "a+") as out_f:
         for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
-            print(line, end="")
+            logger.info(line, end="")
             out_f.write(line)
     ret_code = proc.wait()
     if ret_code != 0:

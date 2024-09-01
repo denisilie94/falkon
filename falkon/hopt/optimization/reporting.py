@@ -1,3 +1,4 @@
+import logging
 import dataclasses
 import os
 from typing import Dict, Iterator, Optional, Sequence
@@ -12,6 +13,7 @@ from falkon.hopt.utils import get_scalar
 
 LOG_DIR = "./logs/tensorboard"
 _writer = None
+logger = logging.getLogger(__name__)
 
 
 def get_writer(name=None):
@@ -48,7 +50,7 @@ def report_losses(losses: Sequence[torch.Tensor], loss_names: Sequence[str], ste
     if len(losses) > 1:
         report_str += f"tot: {loss_sum:.3e}"
     report_dict["loss"] = loss_sum
-    print(report_str, flush=True)
+    logger.info(report_str)
     return report_dict
 
 
@@ -132,7 +134,7 @@ def pred_reporting(
         val_err, err_name = err_fn(Yval.detach().cpu(), val_preds)
         out_str += f" - Val {err_name} = {val_err:6.4f}"
         writer.add_scalar(f"error/{err_name}/val", val_err, epoch)
-    print(out_str, flush=True)
+    logger.info(out_str)
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     return {
@@ -210,11 +212,11 @@ def epoch_bookkeeping(
                     past_errs.append(abs(plog["train_error"]))
                 if len(past_errs) >= accuracy_increase_patience:
                     break
-            print("Past errors: ", past_errs)
+            logger.info("Past errors: ", past_errs)
             if len(past_errs) >= accuracy_increase_patience:
                 if np.argmin(past_errs) == (len(past_errs) - 1):  # The minimal error in the oldest log
                     cur_acc = model.flk_opt.cg_tolerance
                     new_acc = cur_acc / 10
-                    print("INFO: Changing tolerance to %e" % (new_acc))
+                    logger.info("INFO: Changing tolerance to %e" % (new_acc))
                     new_opt = dataclasses.replace(model.flk_opt, cg_tolerance=new_acc)
                     model.flk_opt = new_opt

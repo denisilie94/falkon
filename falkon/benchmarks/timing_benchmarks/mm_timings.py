@@ -1,4 +1,5 @@
 import time
+import logging
 
 import kernels
 import numpy as np
@@ -6,6 +7,7 @@ import torch
 
 import falkon
 
+logger = logging.getLogger(__name__)
 
 def gen_random(a, b, dtype, F=False, seed=0):
     rng = np.random.default_rng(seed)
@@ -27,8 +29,8 @@ def run_mm_exp(exp_name, kernel, N, D, pin_memory, num_reps):
         torch.cuda.synchronize()
         t_e = time.time()
         timings.append(t_e - t_s)
-        print(f"{exp_name} - {N=} {D=} {pin_memory=} - {t_e - t_s:.2f}s", flush=True)
-    print(f"\t min={np.min(timings):.2f}s")
+        logger.info(f"{exp_name} - {N=} {D=} {pin_memory=} - {t_e - t_s:.2f}s")
+    logger.info(f"\t min={np.min(timings):.2f}s")
     return np.min(timings)
 
 
@@ -40,4 +42,4 @@ if __name__ == "__main__":
         kernel = kernels.GaussianKernel(sigma=5.0, opt=init_opt)
         exp_name = f"exp-{no_single_kernel=}"
         run_mm_exp(exp_name=exp_name, kernel=kernel, N=N, D=D, pin_memory=True, num_reps=5)
-        print()
+        logger.info()

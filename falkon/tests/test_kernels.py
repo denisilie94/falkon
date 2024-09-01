@@ -1,5 +1,6 @@
 import dataclasses
 import time
+import logging
 
 import numpy as np
 import pytest
@@ -20,6 +21,8 @@ from falkon.tests.naive_kernels import (
 from falkon.utils import decide_cuda
 from falkon.utils.helpers import sizeof_dtype
 from falkon.utils.switches import decide_keops
+
+logger = logging.getLogger(__name__)
 
 cuda_mark = pytest.mark.skipif(not decide_cuda(), reason="No GPU found.")
 keops_mark = pytest.mark.skipif(not decide_keops(), reason="no KeOps found.")
@@ -684,7 +687,7 @@ class TestBenchmark:
             kernel.mmv(A, B, v)
             t_e = time.time()
             t_elapsed.append(t_e - t_s)
-        print(
+        logger.info(
             f"Timings (RBF MMv, order={order}, input={str(A.device):8}, n={n:8d}, m={m:8d}, d={d:8d}, t={t:8d}): "
             f"{np.mean(t_elapsed):.4f}s  +-  {np.std(t_elapsed):.4f}s"
             f" -- min={np.min(t_elapsed):.4f}s"

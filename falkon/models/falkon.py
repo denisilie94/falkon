@@ -1,5 +1,6 @@
 import dataclasses
 import time
+import logging
 import warnings
 from typing import Callable, Optional, Tuple, Union, Any
 
@@ -15,6 +16,7 @@ from falkon.utils import TicToc
 from falkon.utils.devices import get_device_info
 
 __all__ = ("Falkon",)
+logger = logging.getLogger(__name__)
 
 
 def get_min_cuda_preconditioner_size(dt, opt: FalkonOptions) -> int:
@@ -155,7 +157,7 @@ class Falkon(FalkonBase):
         with TicToc(f"Calcuating Preconditioner of size {num_centers}", debug=self.options.debug):
             pc_opt: FalkonOptions = dataclasses.replace(self.options, use_cpu=not use_cuda_pc)
             if pc_opt.debug:
-                print("Preconditioner will run on %s" % ("CPU" if pc_opt.use_cpu else ("%d GPUs" % self.num_gpus)))
+                logger.info("Preconditioner will run on %s" % ("CPU" if pc_opt.use_cpu else ("%d GPUs" % self.num_gpus)))
             pc = FalkonPreconditioner(self.penalty, self.kernel, pc_opt)
             ny_weight_vec = None
             if self.weight_fn is not None:
@@ -193,7 +195,7 @@ class Falkon(FalkonBase):
             o_opt: FalkonOptions = dataclasses.replace(self.options, use_cpu=not use_cuda)
             if o_opt.debug:
                 optim_dev_str = "CPU" if o_opt.use_cpu else f"{self.num_gpus} GPUs"
-                print(f"Optimizer will run on {optim_dev_str}", flush=True)
+                logger.info(f"Optimizer will run on {optim_dev_str}")
             optim = falkon.optim.FalkonConjugateGradient(kernel, self.precond, o_opt, weight_fn=self.weight_fn)
             beta = optim.solve(
                 X, ny_pts, Y, self.penalty, initial_solution=warm_start, max_iter=self.maxiter, callback=cb

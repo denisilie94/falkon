@@ -1,4 +1,5 @@
 import math
+import logging
 from collections import defaultdict
 
 import torch
@@ -14,6 +15,7 @@ from falkon.utils.tensor_helpers import copy_same_stride, create_fortran, is_f_c
 from .ooc_utils import calc_block_sizes
 
 __all__ = ("gpu_cholesky",)
+logger = logging.getLogger(__name__)
 
 
 def _ic_cholesky(A, upper, device):
@@ -221,11 +223,11 @@ def gpu_cholesky(A: torch.Tensor, upper: bool, clean: bool, overwrite: bool, opt
     # Handle different implementations for POTRF: in-core and out-of-core
     if ic:
         if opt.debug:
-            print("Using in-core POTRF")
+            logger.info("Using in-core POTRF")
         _ic_cholesky(A, upper, device=device.Id)
     else:
         if opt.debug:
-            print("Using parallel POTRF")
+            logger.info("Using parallel POTRF")
         _parallel_potrf_runner(A, opt, gpu_info)
 
     # Perform cleaning of the 'other side' of the matrix

@@ -2,6 +2,7 @@ import argparse
 import functools
 import sys
 import time
+import logging
 from typing import List, Optional
 
 import numpy as np
@@ -13,6 +14,7 @@ from falkon.benchmarks.common.error_metrics import get_err_fns, get_tf_err_fn
 RANDOM_SEED = 123
 EPRO_DIRECTORY = "../../EigenPro2"
 
+logger = logging.getLogger(__name__)
 
 def test_model(model, model_name, Xts, Yts, Xtr, Ytr, err_fns):
     test_preds = model.predict(Xts)
@@ -22,10 +24,10 @@ def test_model(model, model_name, Xts, Yts, Xtr, Ytr, err_fns):
     for err_fn in err_fns:
         test_err, test_err_name = err_fn(Yts, test_preds)
         test_errs.append(test_err)
-        print(f"Test {model_name} {test_err_name}: {test_err:9.6f}", flush=True)
+        logger.info(f"Test {model_name} {test_err_name}: {test_err:9.6f}")
         if Xtr is not None and Ytr is not None:
             train_err, train_err_name = err_fn(Ytr, train_preds)
-            print(f"Train {model_name} {train_err_name}: {train_err:9.6f}", flush=True)
+            logger.info(f"Train {model_name} {train_err_name}: {train_err:9.6f}")
             train_errs.append(train_err)
     return test_errs, train_errs
 
@@ -65,7 +67,7 @@ def run_epro(
 
     # Additional fixed params
     mem_gb = 11
-    print(
+    logger.info(
         f"Starting EigenPro solver with {n_subsample} subsamples, "
         f"{q}-top eigensystem, {eta_divisor} eta-divisor. Random seed: {seed}"
     )
@@ -76,7 +78,7 @@ def run_epro(
         if data_subsample is not None:
             Xtr = Xtr[:data_subsample]
             Ytr = Ytr[:data_subsample]
-            print(f"SUBSAMPLED INPUT DATA TO {Xtr.shape[0]} TRAINING SAMPLES", flush=True)
+            logger.info(f"SUBSAMPLED INPUT DATA TO {Xtr.shape[0]} TRAINING SAMPLES")
         err_fns = [functools.partial(fn, **kwargs) for fn in err_fns]
         tf_err_fn = functools.partial(tf_err_fn, **kwargs)
         tf_err_fn.__name__ = "tf_error"
@@ -92,13 +94,13 @@ def run_epro(
             seed=seed,
             eta_divisor=eta_divisor,
         )
-        print(f"Starting to train model {model} on data {dset}", flush=True)
+        logger.info(f"Starting to train model {model} on data {dset}")
         t_s = time.time()
         model.fit(Xtr, Ytr, x_val=Xts, y_val=Yts, epochs=np.arange(num_iter - 1) + 1)
-        print(f"Training of algorithm {algorithm} on {dset} done in {time.time() - t_s:.2f}s", flush=True)
+        logger.info(f"Training of algorithm {algorithm} on {dset} done in {time.time() - t_s:.2f}s")
         test_model(model, f"{algorithm} on {dset}", Xts, Yts, Xtr, Ytr, err_fns)
     else:
-        print(f"Will train EigenPro model on data {dset} with {kfold}-fold CV", flush=True)
+        logger.info(f"Will train EigenPro model on data {dset} with {kfold}-fold CV")
         load_fn = get_cv_fn(dset)
         iteration = 0
         test_errs, train_errs = [], []
@@ -118,28 +120,28 @@ def run_epro(
                 metric=tf_err_fn,
                 seed=seed,
             )
-            print(f"Starting EPRO fit (fold {iteration})")
+            logger.info(f"Starting EPRO fit (fold {iteration})")
             model.fit(Xtr, Ytr, x_val=Xts, y_val=Yts, epochs=np.arange(num_iter - 1) + 1)
             iteration += 1
             c_test_errs, c_train_errs = test_model(model, f"{algorithm} on {dset}", Xts, Yts, Xtr, Ytr, err_fns)
             train_errs.append(c_train_errs)
             test_errs.append(c_test_errs)
 
-        print(f"Full errors: Test {test_errs} - Train {train_errs}")
-        print()
-        print(f"{kfold}-Fold Error Report")
+        logger.info(f"Full errors: Test {test_errs} - Train {train_errs}")
+        logger.info()
+        logger.info(f"{kfold}-Fold Error Report")
         for err_fn_i in range(len(err_fns)):
-            print(
+            logger.info(
                 f"Final test errors: "
                 f"{np.mean([e[err_fn_i] for e in test_errs]):.4f} +- "
                 f"{np.std([e[err_fn_i] for e in test_errs]):4f}"
             )
-            print(
+            logger.info(
                 f"Final train errors: "
                 f"{np.mean([e[err_fn_i] for e in train_errs]):.4f} +- "
                 f"{np.std([e[err_fn_i] for e in train_errs]):.4f}"
             )
-            print()
+            logger.info()
 
 
 def run_gpytorch_sgpr(
@@ -184,10 +186,10 @@ def run_gpytorch_sgpr(
     )
 
     # Initialize training
-    print(f"Starting to train model {model} on data {dset}", flush=True)
+    logger.info(f"Starting to train model {model} on data {dset}")
     t_s = time.time()
     model.do_train(Xtr, Ytr, Xts, Yts)
-    print(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s", flush=True)
+    logger.info(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s")
     # if isinstance(model, TwoClassVGP):
     #     # Need Ys in range [0,1] for correct error calculation
     #     Yts = (Yts + 1) / 2
@@ -232,7 +234,7 @@ def run_gpytorch(
         # Inducing points
         inducing_idx = np.random.choice(num_samples, num_centers, replace=False)
         inducing_points = Xtr[inducing_idx].reshape(num_centers, -1)
-        print("Took %d random inducing points" % (inducing_points.shape[0]))
+        logger.info("Took %d random inducing points" % (inducing_points.shape[0]))
         # Kernel
         if num_outputs == 1:
             # Kernel has 1 length-scale!
@@ -299,11 +301,11 @@ def run_gpytorch(
     Xtr, Ytr, Xts, Yts, kwargs = load_fn(dtype=dtype.to_numpy_dtype(), as_torch=True)
     err_fns = [functools.partial(fn, **kwargs) for fn in err_fns]
     model = get_model(Xtr, Ytr.shape[1], err_fns[0])
-    print(f"Starting to train model {model} on data {dset}", flush=True)
+    logger.info(f"Starting to train model {model} on data {dset}")
     t_s = time.time()
     with gpytorch.settings.fast_computations(False, False, False):
         model.do_train(Xtr, Ytr, Xts, Yts)
-    print(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s", flush=True)
+    logger.info(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s")
     if isinstance(model, TwoClassVGP):
         # Need Ys in range [0,1] for correct error calculation
         Yts = (Yts + 1) / 2
@@ -364,11 +366,11 @@ def run_falkon(
         err_fns = [functools.partial(fn, **kwargs) for fn in err_fns]
         with TicToc("FALKON ALGORITHM"):
             flk.error_fn = err_fns[0]
-            print(f"Starting to train model {flk} on data {dset}", flush=True)
+            logger.info(f"Starting to train model {flk} on data {dset}")
             flk.fit(Xtr, Ytr, Xts, Yts)
         test_model(flk, f"{algorithm} on {dset}", Xts, Yts, Xtr, Ytr, err_fns)
     else:
-        print(f"Will train model {flk} on data {dset} with {kfold}-fold CV", flush=True)
+        logger.info(f"Will train model {flk} on data {dset} with {kfold}-fold CV")
         load_fn = get_cv_fn(dset)
         iteration = 0
         test_errs, train_errs = [], []
@@ -383,21 +385,21 @@ def run_falkon(
             train_errs.append(c_train_errs)
             test_errs.append(c_test_errs)
 
-        print(f"Full errors: Test {test_errs} - Train {train_errs}")
-        print()
-        print(f"{kfold}-Fold Error Report")
+        logger.info(f"Full errors: Test {test_errs} - Train {train_errs}")
+        logger.info()
+        logger.info(f"{kfold}-Fold Error Report")
         for err_fn_i in range(len(err_fns)):
-            print(
+            logger.info(
                 f"Final test errors: "
                 f"{np.mean([e[err_fn_i] for e in test_errs]):.4f} +- "
                 f"{np.std([e[err_fn_i] for e in test_errs]):4f}"
             )
-            print(
+            logger.info(
                 f"Final train errors: "
                 f"{np.mean([e[err_fn_i] for e in train_errs]):.4f} +- "
                 f"{np.std([e[err_fn_i] for e in train_errs]):.4f}"
             )
-            print()
+            logger.info()
 
 
 def run_logistic_falkon(
@@ -460,7 +462,7 @@ def run_logistic_falkon(
     err_fns = [functools.partial(fn, **kwargs) for fn in err_fns]
     with TicToc("LOGISTIC FALKON ALGORITHM"):
         flk.error_fn = err_fns[0]
-        print(f"Starting to train model {flk} on data {dset}", flush=True)
+        logger.info(f"Starting to train model {flk} on data {dset}")
         flk.fit(Xtr, Ytr, Xts, Yts)
     test_model(flk, f"{algorithm} on {dset}", Xts, Yts, Xtr, Ytr, err_fns)
 
@@ -505,7 +507,7 @@ def run_sgpr_gpflow(
     # Inducing points
     inducing_idx = np.random.choice(Xtr.shape[0], num_centers, replace=False)
     inducing_points = Xtr[inducing_idx].reshape(num_centers, -1)
-    print("Took %d random inducing points" % (inducing_points.shape[0]))
+    logger.info("Took %d random inducing points" % (inducing_points.shape[0]))
     if Ytr.shape[1] != 1:
         raise NotImplementedError("SGPR GPFLOW only implemented for 1 output")
 
@@ -519,9 +521,9 @@ def run_sgpr_gpflow(
         lr=lr,
     )
     t_s = time.time()
-    print(f"Starting to train model {model} on data {dset}", flush=True)
+    logger.info(f"Starting to train model {model} on data {dset}")
     model.fit(Xtr, Ytr, Xts, Yts)
-    print(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s", flush=True)
+    logger.info(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s")
     test_model(model, f"{algorithm} on {dset}", Xts, Yts, Xtr, Ytr, err_fns)
 
 
@@ -563,7 +565,7 @@ def run_gpflow(
         # Inducing points
         inducing_idx = np.random.choice(Xtr.shape[0], num_centers, replace=False)
         inducing_points = Xtr[inducing_idx].reshape(num_centers, -1)
-        print("Took %d random inducing points" % (inducing_points.shape[0]))
+        logger.info("Took %d random inducing points" % (inducing_points.shape[0]))
 
         num_classes = 0
         if algorithm == Algorithm.GPFLOW_CLS:
@@ -595,9 +597,9 @@ def run_gpflow(
     kernel = gpflow.kernels.SquaredExponential(lengthscales=sigma_initial, variance=kernel_variance)
     model = get_model(Xtr, Ytr.shape[1], err_fns[0], kernel)
     t_s = time.time()
-    print(f"Starting to train model {model} on data {dset}", flush=True)
+    logger.info(f"Starting to train model {model} on data {dset}")
     model.fit(Xtr, Ytr, Xts, Yts)
-    print(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s", flush=True)
+    logger.info(f"Training of {algorithm} on {dset} complete in {time.time() - t_s:.2f}s")
     if model.num_classes == 2:
         Yts = (Yts + 1) / 2
         Ytr = (Ytr + 1) / 2
@@ -607,8 +609,8 @@ def run_gpflow(
 if __name__ == "__main__":
     import datetime
 
-    print("-------------------------------------------")
-    print(print(datetime.datetime.now()))
+    logger.info("-------------------------------------------")
+    logger.info(logger.info(datetime.datetime.now()))
     p = argparse.ArgumentParser(description="FALKON Benchmark Runner")
 
     p.add_argument(
@@ -729,7 +731,7 @@ if __name__ == "__main__":
     )
 
     args = p.parse_args()
-    print(f"STARTING WITH SEED {args.seed}")
+    logger.info(f"STARTING WITH SEED {args.seed}")
 
     if args.algorithm == Algorithm.FALKON:
         run_falkon(

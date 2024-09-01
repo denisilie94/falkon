@@ -1,8 +1,10 @@
 import multiprocessing as mpr
 import threading as thr
 import time
+import logging
 from typing import List, Optional
 
+logger = logging.getLogger(__name__)
 
 class Timer:
     def __init__(self, time_list: List[float]):
@@ -30,7 +32,7 @@ class TicToc:
         if _print and self.should_print:
             indent_level = len(times)
             indent_str = self._get_indent_str(indent_level)
-            print(f"{indent_str}{mp_name}::[{self.title}]", flush=True)
+            logger.info(f"{indent_str}{mp_name}::[{self.title}]")
         times.append(time.time())
 
     def toc(self):
@@ -41,7 +43,7 @@ class TicToc:
         indent_level = len(times)
         indent_str = self._get_indent_str(indent_level)
         if self.should_print:
-            print(f"{indent_str}{mp_name}::[{self.title}] complete in {t_elapsed:.3f}s", flush=True)
+            logger.info(f"{indent_str}{mp_name}::[{self.title}] complete in {t_elapsed:.3f}s")
 
     def toc_val(self):
         mp_name = self.mp_name

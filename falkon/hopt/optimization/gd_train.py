@@ -1,4 +1,6 @@
 import time
+import logging
+
 from functools import reduce
 from typing import Dict, List, Optional
 
@@ -12,6 +14,7 @@ __all__ = [
     "train_complexity_reg",
     "train_complexity_reg_mb",
 ]
+logger = logging.getLogger(__name__)
 
 
 def hp_grad(model: HyperoptObjective, *loss_terms, accumulate_grads=True, verbose=True):
@@ -37,9 +40,9 @@ def create_optimizer(opt_type: str, model: HyperoptObjective, learning_rate: flo
     center_lr_div = 1
     schedule = None
     named_params = dict(model.named_parameters())
-    print("Creating optimizer with the following parameters:")
+    logger.info("Creating optimizer with the following parameters:")
     for k, v in named_params.items():
-        print(f"\t{k} : {v.shape}")
+        logger.info(f"\t{k} : {v.shape}")
     if opt_type == "adam":
         if "penalty" not in named_params:
             opt_modules = [{"params": named_params.values(), "lr": learning_rate}]
@@ -92,8 +95,8 @@ def train_complexity_reg(
     if cuda:
         Xtr, Ytr, Xts, Yts = Xtr.cuda(), Ytr.cuda(), Xts.cuda(), Yts.cuda()
     opt_hp, schedule = create_optimizer(optimizer, model, learning_rate)
-    print(f"Starting hyperparameter optimization on model {model}.")
-    print(f"Will run for {num_epochs} epochs with {opt_hp} optimizer.")
+    logger.info(f"Starting hyperparameter optimization on model {model}.")
+    logger.info(f"Will run for {num_epochs} epochs with {opt_hp} optimizer.")
 
     logs = []
     cum_time = 0
@@ -112,7 +115,7 @@ def train_complexity_reg(
             except RuntimeError as e:
                 if "Cholesky" not in str(e):
                     raise e
-                print(f"Cholesky failure at epoch {epoch}. Exiting optimization!")
+                logger.info(f"Cholesky failure at epoch {epoch}. Exiting optimization!")
                 break
 
             cum_time += time.time() - t_start
@@ -131,13 +134,13 @@ def train_complexity_reg(
                     accuracy_increase_patience=cgtol_decrease_epochs,
                 )
             except EarlyStop as e:
-                print(e)
+                logger.info(e)
                 break
         torch.cuda.empty_cache()
     if prof is not None:
-        print(prof.key_averages().table())
+        logger.info(prof.key_averages().table())
     if retrain_nkrr:
-        print(f"Final retrain after {num_epochs} epochs:")
+        logger.info(f"Final retrain after {num_epochs} epochs:")
         pred_dict = pred_reporting(
             model=model,
             Xtr=Xtr,
@@ -175,8 +178,8 @@ def train_complexity_reg_mb(
     if cuda:
         Xtrc, Ytrc, Xtsc, Ytsc = Xtr.cuda(), Ytr.cuda(), Xts.cuda(), Yts.cuda()
     opt_hp, schedule = create_optimizer(optimizer, model, learning_rate)
-    print(f"Starting hyperparameter optimization on model {model}.")
-    print(f"Will run for {num_epochs} epochs with {opt_hp} optimizer, " f"mini-batch size {minibatch}.")
+    logger.info(f"Starting hyperparameter optimization on model {model}.")
+    logger.info(f"Will run for {num_epochs} epochs with {opt_hp} optimizer, " f"mini-batch size {minibatch}.")
 
     logs = []
     cum_time = 0
@@ -211,10 +214,10 @@ def train_complexity_reg_mb(
                 accuracy_increase_patience=cgtol_decrease_epochs,
             )
         except EarlyStop as e:
-            print(e)
+            logger.info(e)
             break
     if retrain_nkrr:
-        print(f"Final retrain after {num_epochs} epochs:")
+        logger.info(f"Final retrain after {num_epochs} epochs:")
         pred_dict = pred_reporting(
             model=model,
             Xtr=Xtrc,

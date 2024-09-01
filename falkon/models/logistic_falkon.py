@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Callable, List, Optional, Tuple, Union
 
 import torch
@@ -11,6 +12,7 @@ from falkon.options import FalkonOptions
 from falkon.utils import TicToc
 
 __all__ = ("LogisticFalkon",)
+logger = logging.getLogger(__name__)
 
 
 class LogisticFalkon(FalkonBase):
@@ -198,7 +200,7 @@ class LogisticFalkon(FalkonBase):
                 def validation_cback(it, beta, train_time):
                     self.fit_times_.append(self.fit_times_[0] + train_time)
                     if it % self.error_every != 0:
-                        print(f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s", flush=True)
+                        logger.info(f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s")
                         return
                     err_str = "training" if Xts is None or Yts is None else "validation"
                     coeff = self._params_to_original_space(beta, precond)
@@ -214,11 +216,10 @@ class LogisticFalkon(FalkonBase):
                     err_name = "error"
                     if isinstance(err, tuple) and len(err) == 2:
                         err, err_name = err
-                    print(
+                    logger.info(
                         f"Iteration {it:3d} - Elapsed {self.fit_times_[-1]:.2f}s - "
                         f"{err_str} loss {loss:.4f} - "
-                        f"{err_str} {err_name} {err:.4f} ",
-                        flush=True,
+                        f"{err_str} {err_name} {err:.4f} "
                     )
 
             else:
@@ -229,7 +230,7 @@ class LogisticFalkon(FalkonBase):
             t_elapsed = 0.0
             for out_iter, penalty in enumerate(self.penalty_list):
                 max_iter = self.iter_list[out_iter]
-                print("Iteration %d - penalty %e - sub-iterations %d" % (out_iter, penalty, max_iter), flush=True)
+                logger.info("Iteration %d - penalty %e - sub-iterations %d" % (out_iter, penalty, max_iter))
 
                 with TicToc("Preconditioner", self.options.debug):
                     precond.init(ny_X, ny_Y, beta_it, penalty, X.shape[0])

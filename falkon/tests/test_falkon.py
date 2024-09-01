@@ -3,6 +3,7 @@ import pickle
 import random
 import tempfile
 import threading
+import logging
 
 import numpy as np
 import pytest
@@ -15,6 +16,7 @@ from falkon.models.incore_falkon import InCoreFalkon
 from falkon.options import FalkonOptions
 from falkon.utils import decide_cuda
 
+logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def cls_data():
@@ -235,7 +237,7 @@ class TestWeightedFalkon:
         err_m1 = error_fn(preds_m1, Y[Y == -1])[0]
         err_p1 = error_fn(preds_p1, Y[Y == 1])[0]
 
-        print(
+        logger.info(
             f"Weighted errors: -1 ({err_weight_m1}) +1 ({err_weight_p1}) - "
             f"Normal errors: -1 ({err_m1}) +1 ({err_p1})"
         )

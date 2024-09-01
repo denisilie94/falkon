@@ -1,4 +1,5 @@
 import time
+import logging
 from functools import partial
 
 import numpy as np
@@ -13,6 +14,7 @@ from falkon.tests.gen_random import gen_random, gen_random_pd
 from falkon.utils import decide_cuda
 from falkon.utils.tensor_helpers import create_same_stride, move_tensor
 
+logger = logging.getLogger(__name__)
 
 @pytest.mark.skipif(not decide_cuda(), reason="No GPU found.")
 @pytest.mark.parametrize("order", ["F", "C"])
@@ -256,7 +258,7 @@ def test_potrf_speed():
     np_time = time.time() - t_s
 
     np.testing.assert_allclose(np_chol, our_chol, rtol=1e-5)
-    print("Time for cholesky(%d): Numpy %.2fs - Our %.2fs" % (t, np_time, our_time))
+    logger.info("Time for cholesky(%d): Numpy %.2fs - Our %.2fs" % (t, np_time, our_time))
 
 
 @pytest.mark.parametrize("preserve_diag", [True, False], ids=["preserve", "no-preserve"])
@@ -465,5 +467,5 @@ class TestVecMulTriang:
             torch.cuda.synchronize()
             gpu_times.append(time.time() - t_s)
 
-        print("mat size %d - t_cpu: %.4fs -- t_cuda: %.4fs" % (t, np.min(cpu_times), np.min(gpu_times)))
+        logger.info("mat size %d - t_cpu: %.4fs -- t_cuda: %.4fs" % (t, np.min(cpu_times), np.min(gpu_times)))
         torch.testing.assert_close(out_cpu, out_cuda.cpu())

@@ -1,10 +1,13 @@
 import pytest
 import torch
+import logging
 
 import falkon.kernels
 from falkon import FalkonOptions
 from falkon.hopt.objectives import GCV, LOOCV, SGPR, CompReg, HoldOut, NystromCompReg, StochasticNystromCompReg
 from falkon.kernels import GaussianKernel, PolynomialKernel
+
+logger = logging.getLogger(__name__)
 
 n, d = 1000, 10
 
@@ -61,14 +64,14 @@ def test_exact_objectives(model_cls, kernel):
 
     autograd.set_detect_anomaly(True)
     for _ in range(50):
-        # print(model.kernel.beta, model.kernel.gamma, model.kernel.degree)
+        # logger.info(model.kernel.beta, model.kernel.gamma, model.kernel.degree)
         opt_hp.zero_grad()
         loss = model(X_train, Y_train)
-        print("Loss", loss)
+        logger.info("Loss", loss)
         loss.backward()
         opt_hp.step()
     ts_err = torch.mean((model.predict(X_test) - Y_test) ** 2)
-    print(f"Model {model_cls} obtains {ts_err:.4f} error")
+    logger.info(f"Model {model_cls} obtains {ts_err:.4f} error")
     # assert ts_err < 300
 
 
@@ -107,8 +110,8 @@ def test_stoch_objectives(kernel):
         opt_hp.zero_grad()
         loss = model(X_train, Y_train)
         loss.backward()
-        print("Loss", loss.item())
+        logger.info("Loss", loss.item())
         opt_hp.step()
     ts_err = torch.mean((model.predict(X_test) - Y_test) ** 2)
-    print(f"Model {model.__class__} obtains {ts_err:.4f} error")
+    logger.info(f"Model {model.__class__} obtains {ts_err:.4f} error")
     # assert ts_err < 300

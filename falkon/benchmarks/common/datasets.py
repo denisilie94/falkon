@@ -1,4 +1,6 @@
 import os
+import logging
+
 from abc import ABC, abstractmethod
 from typing import Tuple, Union
 
@@ -10,6 +12,8 @@ from scipy.sparse import load_npz
 from sklearn.datasets import load_svmlight_file
 
 from .benchmark_utils import Dataset
+
+logger = logging.getLogger(__name__)
 
 __all__ = (
     "get_load_fn",
@@ -61,7 +65,7 @@ def load_from_npz(dset_name, folder, dtype, verbose=False):
     x_data = np.asarray(load_npz(x_file).todense()).astype(as_np_dtype(dtype))
     y_data = np.load(y_file).astype(as_np_dtype(dtype))
     if verbose:
-        print(f"Loaded {dset_name}. X: {x_data.shape} - Y: {y_data.shape}")
+        logger.info(f"Loaded {dset_name}. X: {x_data.shape} - Y: {y_data.shape}")
     return x_data, y_data
 
 
@@ -73,7 +77,7 @@ def load_from_t(dset_name, folder, verbose=False):
     x_data_ts, y_data_ts = load_svmlight_file(file_ts)
     x_data_ts = np.asarray(x_data_ts.todense())
     if verbose:
-        print(
+        logger.info(
             f"Loaded {dset_name}. train X: {x_data_tr.shape} - Y: {y_data_tr.shape} - "
             f"test X: {x_data_ts.shape} - Y: {y_data_ts.shape}"
         )
@@ -214,19 +218,18 @@ class MyKFold:
 class BaseDataset:
     def load_data(self, dtype, as_torch=False, as_tf=False):
         X, Y = self.read_data(dtype)
-        print(f"Loaded {self.dset_name} dataset in {dtype} precision.", flush=True)
+        logger.info(f"Loaded {self.dset_name} dataset in {dtype} precision.")
         Xtr, Ytr, Xts, Yts = self.split_data(X, Y, train_frac=None)
         assert Xtr.shape[0] == Ytr.shape[0]
         assert Xts.shape[0] == Yts.shape[0]
         assert Xtr.shape[1] == Xts.shape[1]
-        print(
+        logger.info(
             f"Split the data into {Xtr.shape[0]} training, "
-            f"{Xts.shape[0]} validation points of dimension {Xtr.shape[1]}.",
-            flush=True,
+            f"{Xts.shape[0]} validation points of dimension {Xtr.shape[1]}."
         )
         Xtr, Xts, other_X = self.preprocess_x(Xtr, Xts)
         Ytr, Yts, other_Y = self.preprocess_y(Ytr, Yts)
-        print("Data-preprocessing completed.", flush=True)
+        logger.info("Data-preprocessing completed.")
         kwargs = dict(*other_X)
         kwargs.update(other_Y)
         if as_torch:
@@ -237,8 +240,8 @@ class BaseDataset:
 
     def load_data_cv(self, dtype, k, as_torch=False):
         X, Y = self.read_data(dtype)
-        print(f"Loaded {self.dset_name} dataset in {dtype} precision.", flush=True)
-        print(f"Data size: {X.shape[0]} points with {X.shape[1]} features", flush=True)
+        logger.info(f"Loaded {self.dset_name} dataset in {dtype} precision.")
+        logger.info(f"Data size: {X.shape[0]} points with {X.shape[1]} features")
 
         kfold = MyKFold(n_splits=k, shuffle=True)
         iteration = 0
@@ -249,7 +252,7 @@ class BaseDataset:
             Yts = Y[test_idx]
             Xtr, Xts, other_X = self.preprocess_x(Xtr, Xts)
             Ytr, Yts, other_Y = self.preprocess_y(Ytr, Yts)
-            print(
+            logger.info(
                 "Preprocessing complete (iter %d) - Divided into %d train, %d test points"
                 % (iteration, Xtr.shape[0], Xts.shape[0])
             )

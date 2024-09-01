@@ -1,8 +1,10 @@
 import time
+import logging
 
 import gpytorch
 import torch
 
+logger = logging.getLogger(__name__)
 
 class SGPRBaseModel(gpytorch.models.ExactGP):
     def __init__(self, train_x, train_y, likelihood, inducing_points):
@@ -75,7 +77,7 @@ class GpytorchSGPR:
         params = self.model.parameters()
         if not self.learn_ind_pts:
             exclude = {self.model.inducing_points}
-            print("Excluding inducing points from the model:", exclude)
+            logger.info("Excluding inducing points from the model:", exclude)
             params = list(set(self.model.parameters()) - exclude)
 
         # Define optimizer
@@ -99,13 +101,12 @@ class GpytorchSGPR:
             # Evaluate
             torch.cuda.empty_cache()
             err, err_name = self.err_fn(Yts, self.predict(Xts))
-            print(
+            logger.info(
                 "Epoch %d - Elapsed %.1fs - Train loss: %.3f - Test %s: %.3f"
-                % (epoch + 1, t_elapsed, loss.item(), err_name, err),
-                flush=True,
+                % (epoch + 1, t_elapsed, loss.item(), err_name, err)
             )
             torch.cuda.empty_cache()
-        print("Training took %.2fs" % (t_elapsed))
+        logger.info("Training took %.2fs" % (t_elapsed))
 
     def predict(self, X):
         self.model.eval()

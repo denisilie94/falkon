@@ -3,6 +3,7 @@ import dataclasses
 import numpy as np
 import pytest
 import torch
+import logging
 
 from falkon.kernels import GaussianKernel, LaplacianKernel, MaternKernel, PolynomialKernel
 from falkon.mmv_ops.utils import CUDA_EXTRA_MM_RAM
@@ -18,6 +19,8 @@ from falkon.tests.naive_kernels import (
 from falkon.utils import decide_cuda
 from falkon.utils.helpers import sizeof_dtype
 from falkon.utils.switches import decide_keops
+
+logger = logging.getLogger(__name__)
 
 cuda_mark = pytest.mark.skipif(not decide_cuda(), reason="No GPU found.")
 keops_mark = pytest.mark.skipif(not decide_keops(), reason="no KeOps found.")
@@ -114,7 +117,7 @@ def fix_options(opt):
 def run_sparse_test(k_cls, naive_fn, s_m1, s_m2, m1, m2, v, w, rtol, atol, opt, **kernel_params):
     kernel = k_cls(**kernel_params)
     opt = fix_options(opt)
-    print(f"max mem: {opt.max_gpu_mem}")
+    logger.info(f"max mem: {opt.max_gpu_mem}")
 
     # 1. MM
     mm_out = torch.empty(s_m2.shape[0], s_m1.shape[0], dtype=s_m1.dtype, device=s_m1.device).T

@@ -4,9 +4,11 @@ import timeit
 from typing import Any, Dict, List
 
 import torch
+import logging
 
 from falkon.kernels import GaussianKernel
 
+logger = logging.getLogger(__name__)
 
 def gen_data(N, M, D, T, cuda=False, dtype=torch.float64):
     X1 = torch.randn(N, D, requires_grad=False, dtype=dtype)
@@ -33,7 +35,7 @@ def run_mmv_exp(exp_name, fn, changing_var, data_sizes, kernel, dtype, num_reps)
         _vars.update(globals())
         exp_times = timeit.repeat(fn, globals=_vars, number=1, repeat=num_reps)
         timings.append(min(exp_times))
-        print("Exp %s - N %d, D %d, M %d, T %d - %.2fs" % (exp_name, N, D, M, T, timings[-1]), flush=True)
+        logger.info("Exp %s - N %d, D %d, M %d, T %d - %.2fs" % (exp_name, N, D, M, T, timings[-1]))
         torch.cuda.empty_cache()
     return timings
 

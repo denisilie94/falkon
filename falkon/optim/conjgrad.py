@@ -1,5 +1,6 @@
 import functools
 import time
+import logging
 from contextlib import ExitStack
 from typing import Callable, List, Optional
 
@@ -29,6 +30,8 @@ from falkon.utils.tensor_helpers import copy_same_stride, create_same_stride
 #         rsold = rsnew;
 #     end
 # end
+
+logger = logging.getLogger(__name__)
 
 
 class StopOptimizationException(Exception):
@@ -169,7 +172,7 @@ class ConjugateGradient(Optimizer):
                     try:
                         callback(self.num_iter + 1, X, e_train)
                     except StopOptimizationException as e:
-                        print(f"Optimization stopped from callback: {e.message}")
+                        logger.info(f"Optimization stopped from callback: {e.message}")
                         break
         if diff_conv:
             if len(x_converged) > 0:

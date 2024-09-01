@@ -1,4 +1,5 @@
 import time
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +11,7 @@ from falkon.hopt.utils import get_scalar
 
 # TODO: THIS IS BROKEN (due to attempting to change the parameters of a nn.Module)
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class HPGridPoint:
@@ -36,8 +38,8 @@ def run_on_grid(
     if cuda:
         Xtr, Ytr, Xts, Yts = Xtr.cuda(), Ytr.cuda(), Xts.cuda(), Yts.cuda()
 
-    print(f"Starting grid-search on model {model}.")
-    print(f"Will run for {len(grid_spec)} points.")
+    logger.info(f"Starting grid-search on model {model}.")
+    logger.info(f"Will run for {len(grid_spec)} points.")
 
     if minibatch is None or minibatch <= 0:
         minibatch = Xtr.shape[0]

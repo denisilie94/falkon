@@ -2,6 +2,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
+import logging
 
 import falkon
 from falkon import FalkonOptions
@@ -16,6 +17,7 @@ from falkon.utils.helpers import sizeof_dtype
 from falkon.utils.tictoc import Timer
 
 EPS = 5e-5
+logger = logging.getLogger(__name__)
 
 
 class StochasticNystromCompReg(HyperoptObjective):
@@ -178,7 +180,7 @@ class NystromCompRegFn(torch.autograd.Function):
     @staticmethod
     def print_times():
         num_times = len(NystromCompRegFn.iter_times)
-        print(
+        logger.info(
             f"Timings: Preparation {np.sum(NystromCompRegFn.iter_prep_times) / num_times:.2f} "
             f"Falkon solve {np.sum(NystromCompRegFn.solve_times) / num_times:.2f} "
             f"(in {np.sum(NystromCompRegFn.num_flk_iters) / num_times:.1f} iters) "
@@ -433,7 +435,7 @@ class NystromCompRegFn(torch.autograd.Function):
 
         deff_fwd, dfit_fwd, trace_fwd = fwd
         ctx.grads = grads
-        # print(f"Stochastic: D-eff {deff_fwd:.3e} Data-Fit {dfit_fwd:.3e} Trace {trace_fwd:.3e}")
+        # logger.info(f"Stochastic: D-eff {deff_fwd:.3e} Data-Fit {dfit_fwd:.3e} Trace {trace_fwd:.3e}")
         return (deff_fwd + dfit_fwd + trace_fwd).to(X.device)
 
     @staticmethod

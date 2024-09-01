@@ -3,6 +3,7 @@ import pickle
 import random
 import tempfile
 import threading
+import logging
 
 import numpy as np
 import pytest
@@ -13,6 +14,8 @@ from falkon import FalkonOptions, InCoreFalkon, kernels
 from falkon.center_selection import FixedSelector
 from falkon.ooc_ops import gpu_lauum
 from falkon.utils import decide_cuda
+
+logger = logging.getLogger(__name__)
 
 
 def _ooc_lauum_runner_str(fname_A, fname_out, num_rep, gpu_num):
@@ -99,7 +102,7 @@ class TestStressOocLauum:
                 try:
                     np.testing.assert_allclose(expected.numpy(), actual[i][j].numpy(), rtol=1e-7)
                 except AssertionError:  # noqa: PERF203
-                    print(f"Result {j} from process {i} is incorrect")
+                    logger.info(f"Result {j} from process {i} is incorrect")
                     wrong += 1
                     raise
         assert wrong == 0, f"{wrong} results were not equal"
@@ -223,6 +226,6 @@ class TestStressInCore:
                 try:
                     np.testing.assert_allclose(expected.numpy(), actual[i][j].numpy(), rtol=1e-7)
                 except AssertionError:  # noqa: PERF203
-                    print(f"Result {j} from process {i} is incorrect")
+                    logger.info(f"Result {j} from process {i} is incorrect")
                     wrong += 1
         assert wrong == 0, f"{wrong} results were not equal"

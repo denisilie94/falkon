@@ -1,6 +1,7 @@
 import functools
 import json
 import time
+import logging
 from typing import Any, Dict, List
 
 import numpy as np
@@ -11,6 +12,7 @@ import falkon
 from falkon.ooc_ops.ooc_potrf import gpu_cholesky
 from falkon.utils import devices
 
+logger = logging.getLogger(__name__)
 
 def gen_random(a, b, dtype, F=False, seed=0):
     rng = np.random.default_rng(seed)
@@ -42,7 +44,7 @@ def run_potrf_exp(exp_name, fn, exp_sizes, num_reps, is_torch, dtype):
             fn(Ac)
             t_e = time.time()
             rep_times.append(t_e - t_s)
-            print("Exp %s - N %d - Rep %d - %.2fs" % (exp_name, num_pts, j, rep_times[-1]), flush=True)
+            logger.info("Exp %s - N %d - Rep %d - %.2fs" % (exp_name, num_pts, j, rep_times[-1]))
             del Ac
             if is_torch:
                 torch.cuda.empty_cache()

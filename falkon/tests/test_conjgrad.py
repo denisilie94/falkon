@@ -3,6 +3,7 @@ import dataclasses
 import numpy as np
 import pytest
 import torch
+import logging
 
 from falkon.center_selection import UniformSelector
 from falkon.kernels import GaussianKernel, PrecomputedKernel
@@ -13,6 +14,7 @@ from falkon.tests.gen_random import gen_random, gen_random_pd
 from falkon.utils import decide_cuda
 from falkon.utils.tensor_helpers import create_same_stride, move_tensor
 
+logger = logging.getLogger(__name__)
 
 @pytest.mark.full
 @pytest.mark.parametrize("order", ["F", "C"])
@@ -146,7 +148,7 @@ class TestFalkonConjugateGradient:
         sol = None
         for _ in range(30):
             sol = opt.solve(X=data, M=centers, Y=vec_rhs, _lambda=self.penalty, initial_solution=sol, max_iter=6)
-            print()
+            logger.info()
 
         alpha = preconditioner.apply(sol)
         np.testing.assert_allclose(expected, alpha.cpu().numpy(), rtol=1e-5)

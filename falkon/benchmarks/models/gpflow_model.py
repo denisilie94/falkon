@@ -1,4 +1,6 @@
 import time
+import logging
+
 from functools import partial
 
 import gpflow
@@ -9,6 +11,7 @@ from gpflow import set_trainable
 from gpflow.models import SVGP
 from gpflow.optimizers import NaturalGradient
 
+logger = logging.getLogger(__name__)
 
 @tf.function(autograph=False)
 def elbo_opt_step(optimizer, model, batch):
@@ -42,7 +45,7 @@ class TrainableGPR:
         adam_opt = tf.optimizers.Adam(self.lr)
 
         gpflow.utilities.print_summary(self.model)
-        print("", flush=True)
+        logger.info("")
 
         @tf.function
         def step_fn():
@@ -61,15 +64,14 @@ class TrainableGPR:
             t_elapsed += time.time() - t_s
             if (step + 1) % 1 == 0:
                 val_err, err_name = self.err_fn(Yval, pred_fn())
-                print(
-                    f"Epoch {step + 1} - {t_elapsed:7.2f}s elapsed - " f"validation {err_name} {val_err:7.5f}",
-                    flush=True,
+                logger.info(
+                    f"Epoch {step + 1} - {t_elapsed:7.2f}s elapsed - " f"validation {err_name} {val_err:7.5f}"
                 )
-                print(f"\tLengthscale: {self.kernel.lengthscales}")
+                logger.info(f"\tLengthscale: {self.kernel.lengthscales}")
 
-        print("Final model is ")
+        logger.info("Final model is ")
         gpflow.utilities.print_summary(self.model)
-        print("", flush=True)
+        logger.info("")
         return self
 
     def predict(self, X, pred_fn=None):
@@ -113,7 +115,7 @@ class TrainableSGPR:
             set_trainable(self.model.inducing_variable.Z, False)
 
         gpflow.utilities.print_summary(self.model)
-        print("", flush=True)
+        logger.info("")
 
         @tf.function
         def grad_fn():
@@ -124,7 +126,7 @@ class TrainableSGPR:
             opt = gpflow.optimizers.Scipy()
 
             def scipy_callback(step, variables, value):
-                print("Step %d - Variables: %s" % (step, value))
+                logger.info("Step %d - Variables: %s" % (step, value))
 
             opt.minimize(
                 self.model.training_loss,
@@ -153,15 +155,14 @@ class TrainableSGPR:
                 t_elapsed += time.time() - t_s
                 val_err, err_name = self.err_fn(Yval, self.predict(Xval))
                 gpflow.utilities.print_summary(self.model)
-                print(
-                    f"Epoch {step + 1} - {t_elapsed:7.2f}s elapsed - " f"validation {err_name} {val_err:7.5f}",
-                    flush=True,
+                logger.info(
+                    f"Epoch {step + 1} - {t_elapsed:7.2f}s elapsed - " f"validation {err_name} {val_err:7.5f}"
                 )
-            print(self.model.inducing_variable.Z.numpy())
+            logger.info(self.model.inducing_variable.Z.numpy())
 
-        print("Final model is ")
+        logger.info("Final model is ")
         gpflow.utilities.print_summary(self.model)
-        print("", flush=True)
+        logger.info("")
         return self
 
     def gradient_map(self, X, Y, Xval, Yval, variance_list, lengthscale_list):
@@ -193,13 +194,13 @@ class TrainableSGPR:
                     "variance_g": grads[1],
                     "elbo": self.model.elbo().numpy(),
                 }
-                print(f"ELBO: {new_row['elbo']:10.3f} - TRAINING LOSS: {self.model.training_loss():10.3f}")
+                logger.info(f"ELBO: {new_row['elbo']:10.3f} - TRAINING LOSS: {self.model.training_loss():10.3f}")
                 tr_err, tr_err_name = self.err_fn(Y, train_preds)
                 ts_err, ts_err_name = self.err_fn(Yval, test_preds)
                 new_row["train_%s" % tr_err_name] = tr_err
                 new_row["test_%s" % ts_err_name] = ts_err
                 df = df.append(new_row, ignore_index=True)
-                print(new_row)
+                logger.info(new_row)
         return df
 
     def predict(self, X):
@@ -304,7 +305,7 @@ class TrainableSVGP:
 
         # Print
         gpflow.utilities.print_summary(self.model)
-        print("", flush=True)
+        logger.info("")
 
         # Giacomo: If shuffle buffer is too large it will run OOM
         if self.num_classes == 2:
@@ -340,25 +341,24 @@ class TrainableSVGP:
             outcome = int(outcome) + 1
             t_elapsed += time.time() - t_s
             if step % 500 == 0:
-                print("Step %d -- Elapsed %.2fs" % (step, t_elapsed), flush=True)
+                logger.info("Step %d -- Elapsed %.2fs" % (step, t_elapsed))
                 gpflow.utilities.print_summary(self.model)
-                print(self.model.inducing_variable.Z.numpy())
+                logger.info(self.model.inducing_variable.Z.numpy())
             if (step + 1) % self.error_every == 0:
                 preds = self.predict(Xval)
                 val_err, err_name = self.err_fn(Yval, preds)
-                print(
-                    f"Step {step + 1} - {t_elapsed:7.2f}s Elapsed - " f"Validation {err_name} {val_err:7.5f}",
-                    flush=True,
+                logger.info(
+                    f"Step {step + 1} - {t_elapsed:7.2f}s Elapsed - " f"Validation {err_name} {val_err:7.5f}"
                 )
 
         preds = self.predict(Xval)
         val_err, err_name = self.err_fn(Yval, preds)
-        print(
-            f"Finished optimization - {t_elapsed:7.2f}s Elapsed - " f"Validation {err_name} {val_err:7.5f}", flush=True
+        logger.info(
+            f"Finished optimization - {t_elapsed:7.2f}s Elapsed - " f"Validation {err_name} {val_err:7.5f}"
         )
-        print("Final model is ")
+        logger.info("Final model is ")
         gpflow.utilities.print_summary(self.model)
-        print("", flush=True)
+        logger.info("")
         return self
 
     def predict(self, X):
@@ -401,7 +401,7 @@ class TrainableSVGP:
             tf_dt = tf.float32
         else:
             tf_dt = tf.float64
-        print(tf_dt)
+        logger.info(tf_dt)
         train_dataset = (
             tf.data.Dataset.from_generator(generator, args=(self.batch_size,), output_types=(tf_dt, tf_dt))
             .prefetch(self.batch_size * 10)
@@ -442,7 +442,7 @@ class TrainableSVGP:
                 new_row["train_%s" % tr_err_name] = tr_err
                 new_row["test_%s" % ts_err_name] = ts_err
                 df = df.append(new_row, ignore_index=True)
-                print(new_row)
+                logger.info(new_row)
         return df
 
     @property

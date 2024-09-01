@@ -1,4 +1,5 @@
 import os
+import logging
 from dataclasses import dataclass
 from typing import Dict
 
@@ -11,6 +12,7 @@ from falkon.options import BaseOptions
 
 from . import TicToc
 
+logger = logging.getLogger(__name__)
 __all__ = ("get_device_info", "DeviceInfo", "num_gpus")
 
 __COMP_DATA = {}
@@ -133,7 +135,7 @@ def _measure_performance(g, mem):
         tt = tm.toc_val()
         f *= 2
 
-    print(f"{dev.dtype}:{dev.index} - speed: {(float(f) ** 3) / tt}")
+    logger.info(f"{dev.dtype}:{dev.index} - speed: {(float(f) ** 3) / tt}")
 
     del a
     if g >= 0:

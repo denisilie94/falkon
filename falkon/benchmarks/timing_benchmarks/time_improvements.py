@@ -12,6 +12,7 @@ import argparse
 import dataclasses
 import functools
 import time
+import logging
 
 import numpy as np
 import torch
@@ -23,6 +24,7 @@ from falkon.benchmarks.common.datasets import get_load_fn
 from falkon.benchmarks.common.error_metrics import get_err_fns
 
 RANDOM_SEED = 95
+logger = logging.getLogger(__name__)
 
 torch.manual_seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
@@ -63,7 +65,7 @@ def run(exp_num, dset, show_intermediate_errors: bool = False):
         raise ValueError("exp num %d not valid" % (exp_num))
     data = load_data(dset, data_type=dtype)
     torch.cuda.init()
-    print("\n\n --- Running Experiment %d -- %s" % (exp_num, opt))
+    logger.info("\n\n --- Running Experiment %d -- %s" % (exp_num, opt))
     data = list(data)
     data[0] = data[0].pin_memory()
     data[1] = data[1].pin_memory()
@@ -72,7 +74,7 @@ def run(exp_num, dset, show_intermediate_errors: bool = False):
     t_s = time.time()
     flk = run_single(dset, data[0], data[1], data[2], data[3], data[4], show_intermediate_errors, opt, params)
     t_e = time.time()
-    print("Timing for Experiment %d: %s -- fit times %s" % (exp_num, t_e - t_s, flk.fit_times_))
+    logger.info("Timing for Experiment %d: %s -- fit times %s" % (exp_num, t_e - t_s, flk.fit_times_))
 
 
 def load_data(dset, data_type):
